@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuadro Movible</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #red-box {
+            background-color: red;
+            position: absolute;
+            cursor: move;
+        }
+
+        .distance-line {
+            position: absolute;
+            background-color: black;
+            z-index: 30;
+        }
+
+        .distance-text, .renpy-info, .controls {
+            position: absolute;
+            background-color: white;
+            color: black;
+            font-size: 12px;
+            padding: 2px;
+            z-index: 40;
+        }
+
+        .renpy-info {
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="number"] {
+            width: 60px;
+            margin: 0 5px;
+        }
+
+        button {
+            margin-top: 5px;
+            padding: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="red-box" style="width: 512px; height: 512px;"></div>
+    <div id="distance-top" class="distance-line"></div>
+    <div id="distance-right" class="distance-line"></div>
+    <div id="distance-bottom" class="distance-line"></div>
+    <div id="distance-left" class="distance-line"></div>
+
+    <div id="text-top" class="distance-text"></div>
+    <div id="text-right" class="distance-text"></div>
+    <div id="text-bottom" class="distance-text"></div>
+    <div id="text-left" class="distance-text"></div>
+
+    <div id="renpy-info" class="renpy-info">
+        <strong>Información para Ren'Py:</strong><br>
+        xalign: <span id="xalign-value"></span><br>
+        yalign: <span id="yalign-value"></span><br>
+        xpos: <span id="xpos-value"></span><br>
+        ypos: <span id="ypos-value"></span><br>
+        <button id="copy-button">Copiar Valores</button>
+    </div>
+
+    <div class="controls">
+        <label for="width">Ancho:</label>
+        <input type="number" id="width" value="512" min="50">
+        <label for="height">Alto:</label>
+        <input type="number" id="height" value="512" min="50">
+        <button id="set-size">Establecer Tamaño</button>
+    </div>
+
+    <script>
+        const box = document.getElementById('red-box');
+        const lines = {
+            top: document.getElementById('distance-top'),
+            right: document.getElementById('distance-right'),
+            bottom: document.getElementById('distance-bottom'),
+            left: document.getElementById('distance-left'),
+        };
+
+        const texts = {
+            top: document.getElementById('text-top'),
+            right: document.getElementById('text-right'),
+            bottom: document.getElementById('text-bottom'),
+            left: document.getElementById('text-left'),
+        };
+
+        const renpyInfo = document.getElementById('renpy-info');
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const setSizeButton = document.getElementById('set-size');
+        const copyButton = document.getElementById('copy-button');
+
+        const xalignValue = document.getElementById('xalign-value');
+        const yalignValue = document.getElementById('yalign-value');
+        const xposValue = document.getElementById('xpos-value');
+        const yposValue = document.getElementById('ypos-value');
+
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        box.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - box.offsetLeft;
+            offsetY = e.clientY - box.offsetTop;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                let x = e.clientX - offsetX;
+                let y = e.clientY - offsetY;
+
+                // Mantener el cuadro dentro de la ventana
+                x = Math.max(0, Math.min(window.innerWidth - box.clientWidth, x));
+                y = Math.max(0, Math.min(window.innerHeight - box.clientHeight, y));
+
+                box.style.left = x + 'px';
+                box.style.top = y + 'px';
+
+                updateDistances();
+                updateRenpyInfo(x, y);
+            }
+        });
+
+        setSizeButton.addEventListener('click', () => {
+            const newWidth = parseInt(widthInput.value, 10);
+            const newHeight = parseInt(heightInput.value, 10);
+            
+            // Asegurar que el nuevo tamaño sea al menos 50x50 píxeles
+            box.style.width = Math.max(50, newWidth) + 'px';
+            box.style.height = Math.max(50, newHeight) + 'px';
+
+            updateDistances();
+            const rect = box.getBoundingClientRect();
+            updateRenpyInfo(rect.left, rect.top);
+        });
+
+        copyButton.addEventListener('click', () => {
+            const textToCopy = `xalign: ${xalignValue.textContent}, yalign: ${yalignValue.textContent}, xpos: ${xposValue.textContent}px, ypos: ${yposValue.textContent}px`;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('Valores copiados al portapapeles');
+            });
+        });
+
+        function updateDistances() {
+            const rect = box.getBoundingClientRect();
+
+            const distanceTop = rect.top;
+            const distanceRight = window.innerWidth - rect.right;
+            const distanceBottom = window.innerHeight - rect.bottom;
+            const distanceLeft = rect.left;
+
+            // Líneas desde los bordes del cuadro hasta los bordes de la pantalla
+            lines.top.style.width = '1px';
+            lines.top.style.height = distanceTop + 'px';
+            lines.top.style.top = '0px';
+            lines.top.style.left = rect.left + rect.width / 2 + 'px';
+
+            lines.right.style.width = distanceRight + 'px';
+            lines.right.style.height = '1px';
+            lines.right.style.top = rect.top + rect.height / 2 + 'px';
+            lines.right.style.left = rect.right + 'px';
+
+            lines.bottom.style.width = '1px';
+            lines.bottom.style.height = distanceBottom + 'px';
+            lines.bottom.style.top = rect.bottom + 'px';
+            lines.bottom.style.left = rect.left + rect.width / 2 + 'px';
+
+            lines.left.style.width = distanceLeft + 'px';
+            lines.left.style.height = '1px';
+            lines.left.style.top = rect.top + rect.height / 2 + 'px';
+            lines.left.style.left = '0px';
+
+            // Textos de distancia
+            texts.top.textContent = `${distanceTop}px`;
+            texts.top.style.top = (distanceTop / 2 - 10) + 'px';
+            texts.top.style.left = (rect.left + rect.width / 2 - 15) + 'px';
+
+            texts.right.textContent = `${distanceRight}px`;
+            texts.right.style.top = (rect.top + rect.height / 2 - 10) + 'px';
+            texts.right.style.left = (window.innerWidth - distanceRight / 2 - 20) + 'px';
+
+            texts.bottom.textContent = `${distanceBottom}px`;
+            texts.bottom.style.top = (window.innerHeight - distanceBottom / 2 - 15) + 'px';
+            texts.bottom.style.left = (rect.left + rect.width / 2 - 15) + 'px';
+
+            texts.left.textContent = `${distanceLeft}px`;
+            texts.left.style.top = (rect.top + rect.height / 2 - 10) + 'px';
+            texts.left.style.left = (distanceLeft / 2 - 20) + 'px';
+        }
+
+        function updateRenpyInfo(x, y) {
+            const xalign = (x + box.clientWidth / 2) / window.innerWidth;
+            const yalign = (y + box.clientHeight / 2) / window.innerHeight;
+            const xpos = x;
+            const ypos = y;
+
+            xalignValue.textContent = xalign.toFixed(2);
+            yalignValue.textContent = yalign.toFixed(2);
+            xposValue.textContent = xpos;
+            yposValue.textContent = ypos;
+        }
+
+        // Inicializar distancias y posiciones al cargar la página
+        updateDistances();
+        const rect = box.getBoundingClientRect();
+        updateRenpyInfo(rect.left, rect.top);
+    </script>
+</body>
+</html>
