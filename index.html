@@ -176,7 +176,7 @@
         });
 
         copyButton.addEventListener('click', () => {
-            const textToCopy = `xalign: ${xalignValue.textContent}, yalign: ${yalignValue.textContent}, xpos: ${xposValue.textContent}px, ypos: ${yposValue.textContent}px`;
+            const textToCopy = `xalign ${xalignValue.textContent}, yalign ${yalignValue.textContent}, xpos ${xposValue.textContent}, ypos ${yposValue.textContent}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 alert('Valores copiados al portapapeles');
             });
